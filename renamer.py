@@ -70,18 +70,31 @@ if __name__ == "__main__":
     files.sort()
 
     if not quiet:
-        log.info("# Matched files:")
+        log.info("MATCHED FILES:")
         for f in files:
-            log.info(f" - {f} -> {os.path.basename(rename_filename(f, matcher, replace))}")
+            log.info(f" - {f}")
+
+    if not quiet:
+        log.info("EVALUATING RENAME")
+    rename_map = {}
+    for f in files:
+        rename_map[f] = rename_filename(f, matcher, replace)
 
     if not no_journal:
-        journal_path = os.path.join(os.path.abspath(directory),f"rename-journal_{directory}_{int(time.time())}.yaml")
+        journal_path = os.path.join(os.path.abspath(directory), f"rename-journal_{directory}_{int(time.time())}.yaml")
         with open(journal_path, "w", encoding="utf-8") as out_file:
-            for f in files:
-                out_file.write(f"{f}: {os.path.basename(rename_filename(f, matcher, replace))}\n")
+            for f, r in rename_map.items():
+                out_file.write(f"{f}: {r}\n")
     else:
         log.warning("CLEAN active: no journal created, no rollback available.")
 
     if dry_run:
         log.warning("DRY_RUN active: only journal created, no rename done.")
         exit(0)
+
+    if not quiet:
+        log.info("STARTING RENAMING:")
+        for f, r in rename_map.items():
+            if not quiet:
+                log.info(f" - renaming {f} -> {os.path.basename(r)}")
+            os.rename(f, r)
