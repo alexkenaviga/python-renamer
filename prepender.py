@@ -19,18 +19,14 @@ def find_files(local_dir: str, pattern: re.Pattern):
     return files_list
 
 
-def rename_filename(filename: str, matcher_str: str, replace_str: str):
-    p = re.compile(f"(.*)({matcher_str})(.*)", re.IGNORECASE)
+def rename_filename(filename: str, prepend: str):
     basename = os.path.basename(filename)
-    m = p.match(basename)
-    if m is None:
-        return filename
-    rename = f"{m.group(1)}{replace_str}{m.group(3)}"
+    rename = f"{prepend}{basename}"
     return f"{os.path.join(os.path.dirname(filename),rename)}"
 
 
 def print_usage():
-    print("usage: python renamer.py <option_flags> <directory> <matcher> <replace>")
+    print("usage: python prepender.py <option_flags> <directory> <matcher> <prefix>")
     print("options:")
     print(" - d: dry_run, no renaming")
     print(" - q: quiet, no logging")
@@ -55,23 +51,23 @@ if __name__ == "__main__":
 
     directory = sys.argv[1+options_delta]
     matcher = sys.argv[2+options_delta]
-    replace = sys.argv[3+options_delta]
+    prefix = sys.argv[3+options_delta]
     dry_run = option_of(sys.argv, "d")
     quiet = option_of(sys.argv, "q")
     no_journal = option_of(sys.argv, "c")
 
     if not quiet:
-        log.info(f"you asked to replace '{matcher}' with '{replace}' in '{os.path.abspath(directory)}'")
+        log.info(f"you asked to prepend '{prefix}' to '{matcher}' in '{os.path.abspath(directory)}'")
     if not (os.path.exists(directory) or os.path.isdir(directory)):
         log.error(f"{directory} is not a valid directory!")
         exit(2)
 
-    files = find_files(directory, re.compile(f".*{matcher}.*", re.IGNORECASE))
+    files = find_files(directory, re.compile(matcher, re.IGNORECASE))
     files.sort()
 
     rename_map = {}
     for f in files:
-        rename_map[f] = rename_filename(f, matcher, replace)
+        rename_map[f] = rename_filename(f, prefix)
     if not quiet:
         log.info("MATCHED FILES:")
         for f, r in rename_map.items():
@@ -93,7 +89,7 @@ if __name__ == "__main__":
         exit(0)
 
     if not quiet:
-        log.info("STARTING RENAMING:")
+        log.info("STARTING PREPENDING:")
         for f, r in rename_map.items():
             if not quiet:
                 log.info(f" - renaming {f} -> {os.path.basename(r)}")

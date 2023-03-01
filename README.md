@@ -32,6 +32,30 @@ example (*generates only journal*):
 ```shell
 python renamer.py dq test '\.jpeg' '.jpg' 
 ```
+
+## RUN RENAMER:
+```shell
+python prepender.py <options> <directory> <matcher> <prefix>
+```
+to run it directly `chmod +x renamer.py`:
+```shell
+./prepender.py <directory> <matcher> <prefix>
+```
+where parameters are:
+- `options`: 
+  - **d:** dry_run, no renaming
+  - **q:** quiet, no logging
+  - **c:** clean, no journal (WARN: no rollback available with no journal)
+- `directory`: root directory containing files to rename 
+  - **warn:** the script works recursively on subdirectories
+- `matcher`: regexp matching the part of a filename to replace
+- `prefix`: string to use as a prefix
+
+example (*generates only journal*): 
+```shell
+python renamer.py dq test '\.jpeg' '.jpg' 
+```
+
 ## RUN ROLLBACK:
 ```shell
 python rollback.py <options> <journal_file>
