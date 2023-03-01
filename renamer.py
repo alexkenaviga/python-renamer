@@ -32,7 +32,7 @@ def rename_filename(filename: str, matcher_str: str, replace_str: str):
 def print_usage():
     print("usage: python renamer.py <option_flags> <directory> <matcher> <replace>")
     print("options:")
-    print(" - d: dry_run, creates only journal log")
+    print(" - d: dry_run, no renaming")
     print(" - q: quiet, no logging")
     print(" - d: clean, no journal (WARN: no rollback available with no journal)")
     print("i.e.: python renamer.py d ./test '_[0-9]{8}' ''")
