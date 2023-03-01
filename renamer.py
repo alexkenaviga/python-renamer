@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 import sys
 import logging.config
 import os
 import re
+import time
 
 logging.config.fileConfig('logging.conf')
 log = logging.getLogger()
@@ -42,3 +44,8 @@ if __name__ == "__main__":
     log.info("# Matched files:")
     for f in files:
         log.info(f" - {f} -> {os.path.basename(rename_filename(f, matcher, replace))}")
+
+    journal_path = os.path.join(os.path.abspath(directory),f"rename-journal_{directory}_{int(time.time())}.yaml")
+    with open(journal_path, "w", encoding="utf-8") as out_file:
+        for f in files:
+            out_file.write(f"{f}: {os.path.basename(rename_filename(f, matcher, replace))}\n")
