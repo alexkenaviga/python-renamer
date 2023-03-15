@@ -7,6 +7,7 @@ import time
 
 logging.config.fileConfig('logging.conf')
 log = logging.getLogger()
+params_pattern = re.compile("(\\$)([0-9])", re.DOTALL)
 
 
 def find_files(local_dir: str, pattern: re.Pattern):
@@ -27,6 +28,32 @@ def rename_filename(filename: str, matcher_str: str, replace_str: str):
         return filename
     rename = f"{m.group(1)}{replace_str}{m.group(3)}"
     return f"{os.path.join(os.path.dirname(filename),rename)}"
+
+
+def rename_filename_r(filename: str, matcher_str: str, replace_str: str):
+    filename_pattern = re.compile(f"{matcher_str}", re.IGNORECASE)
+    basename = os.path.basename(filename)
+    m = filename_pattern.match(basename)
+    if m is None:
+        return filename
+
+    params_in_replace_str = extract_params(replace_str)
+    rename = replace_str
+    for p in params_in_replace_str:
+        replace_val = m.groups()[p-1] if p > 0 else filename
+        # log.debug(f"  - replacing ${p} with {replace_val}")
+        rename = rename.replace(f"${p}", replace_val)
+    # log.debug(f"  - result {replace_str} -> {rename}")
+    return f"{os.path.join(os.path.dirname(filename),rename)}"
+
+
+def extract_params(replace_str):
+    param_matchers = params_pattern.findall(replace_str)
+    params_list = []
+    for p, v in param_matchers:
+        params_list.append(int(v))
+    params_list.sort()
+    return set(params_list)
 
 
 def print_usage():
@@ -59,9 +86,10 @@ if __name__ == "__main__":
     dry_run = option_of(sys.argv, "d")
     quiet = option_of(sys.argv, "q")
     no_journal = option_of(sys.argv, "c")
+    regexp = option_of(sys.argv, "r")
 
     if not quiet:
-        log.info(f"you asked to replace '{matcher}' with '{replace}' in '{os.path.abspath(directory)}'")
+        log.info(f"you asked to replace [regexp: {regexp}] '{matcher}' with '{replace}' in '{os.path.abspath(directory)}'")
     if not (os.path.exists(directory) or os.path.isdir(directory)):
         log.error(f"{directory} is not a valid directory!")
         exit(2)
@@ -71,7 +99,10 @@ if __name__ == "__main__":
 
     rename_map = {}
     for f in files:
-        rename_map[f] = rename_filename(f, matcher, replace)
+        if regexp:
+            rename_map[f] = rename_filename_r(f, matcher, replace)
+        else:
+            rename_map[f] = rename_filename(f, matcher, replace)
     if not quiet:
         log.info("MATCHED FILES:")
         for f, r in rename_map.items():

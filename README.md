@@ -23,6 +23,7 @@ where parameters are:
   - **d:** dry_run, no renaming
   - **q:** quiet, no logging
   - **c:** clean, no journal (WARN: no rollback available with no journal)
+  - **r:** regexp_match, evaluates the matcher as a regexp on the whole file, allows group indicators in `replace_string` (i.e.: $1, $2, etc.)
 - `directory`: root directory containing files to rename 
   - **warn:** the script works recursively on subdirectories
 - `matcher`: regexp matching the part of a filename to replace
