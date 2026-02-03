@@ -1,8 +1,8 @@
 setup: requirements.txt
-	test -d .env || python3 -m venv .env
-	.env/bin/python -m pip install -U pip
-	.env/bin/python -m pip install -r requirements.txt
-	touch .env/bin/activate
+	test -d .venv || python3 -m venv .venv
+	.venv/bin/python -m pip install -U pip
+	.venv/bin/python -m pip install -r requirements.txt
+	touch .venv/bin/activate
 
 clean:
-	rm -r .env
+	rm -r .venv

@@ -5,3 +5,5 @@ venv
 env
 test
 testing
+__pycache__
+.vscode
