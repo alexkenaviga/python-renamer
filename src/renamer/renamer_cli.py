@@ -217,7 +217,7 @@ def organize_folders_command(
     for file in files_index:
         folder = func.extract_folder(file, criteria, matcher)
         file_path = Path(file)
-        target_file = target_path.joinpath(folder).joinpath(file_path.name)
+        target_file = target_path.joinpath(folder).joinpath(file_path.name).resolve()
         journal[file_path] = target_file
 
     if not quiet:
@@ -226,11 +226,10 @@ def organize_folders_command(
             log.debug(f" - {f}: {r.parent.absolute()}") 
     
     if dryrun:
-        log.warning("DRY_RUN active: only journal created, no rename done.")
-        exit(0)
+        log.warning("DRY_RUN active: only journal will be created")
 
     dir_path = Path(directory)
-    journal_path = dir_path.joinpath(f"organize-journal_{dir_path.name}_{int(time.time())}.yaml")
+    journal_path = dir_path.joinpath(f"organize-journal_{dir_path.name}_{int(time.time())}.yaml").resolve()
     # No file for 'clean' runs
     cm = contextlib.nullcontext() if clean else open(journal_path, "w", encoding="utf-8")
     if clean: log.warning("CLEAN active: no journal created.")
@@ -240,11 +239,12 @@ def organize_folders_command(
         for f, r in journal.items():
             if not quiet: log.info(f" - moving {f.name} -> {r.parent.absolute()}")
             
-            if not r.parent.exists():
-                r.parent.mkdir(parents=True, exist_ok=True)
-                if not quiet: log.info(f"CREATED FOLDER: {r.parent.absolute()}")
-            
-            f.rename(r)
+            if not dryrun:
+                if not r.parent.exists():
+                    r.parent.mkdir(parents=True, exist_ok=True)
+                    if not quiet: log.info(f"CREATED FOLDER: {r.parent.absolute()}")
+                
+                f.rename(r)
 
             if out_file: out_file.write(f"{f.absolute()}: {r.absolute()}\n")
         if not quiet: log.info(f"journal path: {journal_path}")
