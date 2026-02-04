@@ -19,14 +19,6 @@ def common_options(f):
         help="Execute a Dry Run (doesn't apply any change)",
     )(f)
     f = click.option(
-        "-c",
-        "--clean",
-        is_flag=True,
-        show_default=True,
-        default=False,
-        help="no journal (WARN: no rollback available with no journal)",
-    )(f)
-    f = click.option(
         "-q",
         "--quiet",
         is_flag=True,
@@ -51,6 +43,14 @@ i.e.: python renamer.py rename -d ./test '_[0-9]{8}' 'some_string'
         show_default=True,
         default=False,
         help="If set, matcher will be used as a regexp, exact match is used otherwise",
+    )
+@click.option(
+        "-c",
+        "--clean",
+        is_flag=True,
+        show_default=True,
+        default=False,
+        help="no journal (WARN: no rollback available with no journal)",
     )
 @common_options
 def rename_files_command(
@@ -112,6 +112,14 @@ i.e.: python renamer.py prepend -d ./test '_[0-9]{8}' 'a_prefix'
 @click.argument("directory", type=str,)
 @click.argument("matcher", type=str)
 @click.argument("prefix", type=str)
+@click.option(
+        "-c",
+        "--clean",
+        is_flag=True,
+        show_default=True,
+        default=False,
+        help="no journal (WARN: no rollback available with no journal)",
+    )
 @common_options
 def prepend_files_command(
     directory: str, 
@@ -161,6 +169,47 @@ def prepend_files_command(
             os.rename(f, r)
 
 
+@click.command(name="restore", help="""Restores file renaming based on a journal file (Works only if folder was unmodified)\n
+i.e.: python renamer.py restore -d ./test/journal.yaml'
+""")
+@click.argument("journal", type=str)
+@common_options
+def restore_files_command(
+    journal:str,
+    dryrun: bool,
+    quiet: bool
+):
+    if not quiet:
+        log.info(f"you asked to restore '{journal}' [d:{dryrun}, q:{quiet}]")
+    if not os.path.exists(journal) or os.path.isdir(journal):
+        log.error(f"{journal} is not a valid file!")
+        exit(2)
+
+    if dryrun:
+        log.warning("DRY_RUN active: only journal created, no rename done.")
+
+    with open(journal, "r", encoding="utf-8") as journal_file:
+        file_line = journal_file.readline()
+        while file_line:
+            try:
+                split = file_line.split(":")
+                r = split[0].strip()
+                f = split[1].strip()
+                if not os.path.exists(f) or os.path.isdir(f):
+                    if not quiet:
+                        log.info(f" - skipping {f} [doesn't exist]")
+                else:
+                    if not quiet:
+                        log.info(f" - renaming {f} -> {os.path.basename(r)}")
+                    if not dryrun:
+                        os.rename(f, r)
+
+            except Exception as e:
+                log.error(f" - an error occurred while evaluating {file_line}: {str(e)}")
+
+            file_line = journal_file.readline()
+
+
 # Setup
 
 @click.group()
@@ -170,3 +219,4 @@ def cli():
 
 cli.add_command(rename_files_command)
 cli.add_command(prepend_files_command)
+cli.add_command(restore_files_command)
