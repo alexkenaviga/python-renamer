@@ -1,5 +1,6 @@
 import os, re, datetime
 from pathlib import Path
+from collections import defaultdict
 
 
 params_pattern = re.compile("(\\$)([0-9])", re.DOTALL)
@@ -95,3 +96,38 @@ def extract_folder(file: str, type:str, matcher:str):
     
     extractor = matchers[type]
     return extractor(file, matcher)
+
+
+def find_duplicates(folder_a, folder_b, exclude:tuple):
+    file_map = defaultdict(list)
+    exclude_list = [x.lower() for x in exclude ]
+    
+    folders = [Path(folder_a), Path(folder_b)] if folder_a != folder_b else Path(folder_a)
+    for folder in folders:
+        if not folder.is_dir():
+            raise Exception(f"{folder} is not a valid directory.")
+            
+        # rglob("*") finds all files recursively
+        for file_path in folder.rglob("*"):
+            if file_path.is_file() and not is_excluded(file_path, exclude_list):
+        
+                # Extract metadata
+                creation_date = file_path.stat().st_birthtime
+                name = file_path.name
+                size = file_path.stat().st_size
+                
+                # Use metadata as the unique key
+                key = (name, size, creation_date)
+                file_map[key].append(file_path.resolve())
+
+    # Filter out entries that only appeared once
+    duplicates = {k[0]: v for k, v in file_map.items() if len(v) > 1}
+    
+    return duplicates
+
+
+def is_excluded(file: Path, exclude: list):
+    for e in exclude:
+        if e in f"{file.absolute()}".lower(): 
+            return True
+    return False

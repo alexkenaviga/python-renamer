@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 @click.command(name="rename", help="""Rename files given a matching-pattern and a replace-string\n
 i.e.: python renamer.py rename -d ./test '_[0-9]{8}' 'some_string'
 """)
-@click.argument("directory", type=click.Path(exists=True),)
+@click.argument("directory", type=click.Path(exists=True, file_okay=False),)
 @click.argument("matcher", type=str)
 @click.argument("replace", type=str)
 @opt.regexp_option()
@@ -74,7 +74,7 @@ def rename_files_command(
 @click.command(name="prepend", help="""Prepends a string to matching filenames (matcher is threated as regexp)\n
 i.e.: python renamer.py prepend -d ./test '_[0-9]{8}' 'a_prefix'
 """)
-@click.argument("directory", type=click.Path(exists=True),)
+@click.argument("directory", type=click.Path(exists=True, file_okay=False),)
 @click.argument("matcher", type=str)
 @click.argument("prefix", type=str)
 @opt.clean_opt()
@@ -131,7 +131,7 @@ def prepend_files_command(
 @click.command(name="restore", help="""Restores file renaming based on a journal file (Works only if folder was unmodified)\n
 i.e.: python renamer.py restore -d ./test/journal.yaml'
 """)
-@opt.click.argument("journal", type=click.Path(exists=True))
+@opt.click.argument("journal", type=click.Path(exists=True, dir_okay=False))
 @opt.quiet_opt()
 @opt.dryrun_opt()
 def restore_files_command(
@@ -178,7 +178,7 @@ Files are moved in created folder. WARN: action is currently unreversable!
 
 i.e.: python renamer.py organize -d ./test -t MONTH
 """)
-@click.argument("directory", type=click.Path(exists=True))
+@click.argument("directory", type=click.Path(exists=True, file_okay=False))
 @click.option('-o', '--output-folder', type=str, required=False, default=".", help='Output root folder')
 @click.option('-t', '--time-granularity', type=click.Choice(func.folder_time_matchers, 
     case_sensitive=False), help='MONTH for YYYY/MM folders, YEAR for YYYY folders')
@@ -250,10 +250,50 @@ def organize_folders_command(
         if not quiet: log.info(f"journal path: {journal_path}")
 
 
+@click.command(name="find-duplicates", help="""Find duplicates in 2 folders\n
+i.e.: python renamer.py find-duplicates ./test ./test-2
+""")
+@click.argument("directory-a", type=click.Path(exists=True, file_okay=False))
+@click.argument("directory-b", type=click.Path(exists=True, file_okay=False))
+@click.option('-e', '--exclude', help='folder/file names to exclude. Can be repeated', multiple=True)
+# @click.option('-s', '--show', type=click.Choice(["a", "b"], case_sensitive=False), default="b")
+@opt.clean_opt()
+def find_duplicates_command(
+    directory_a: str,
+    directory_b: str,
+    exclude: tuple,
+    #show: str,
+    clean: bool
+):
+    
+    #filter = Path(directory_b) if show.lower() == "b" else Path(directory_a)
+    d = func.find_duplicates(directory_a, directory_b, exclude)
+    duplicates = []
+    for k,v in d.items():
+        item = []
+        for i in v:
+            item.append(str(i.resolve().absolute()))
+            #if i.is_relative_to(filter):
+        duplicates.append(item)
+    
+    journal_path = Path(f"./diff.yaml")
+    # No file for 'clean' runs
+    cm = contextlib.nullcontext() if clean else open(journal_path, "w", encoding="utf-8")
+    if clean: log.warning("CLEAN active: no journal created.")
+
+    with cm as out_file:
+        log.info("DUPLICATES:")
+        for x in duplicates:
+            log.info(f"{', '.join(x)}")
+            if out_file: out_file.write(f"{', '.join(x)}\n")
+        if not clean: 
+            log.info(f"journal path: {journal_path}")
+
+
 # Setup
 
 @click.group()
-@click.option('--log-config', type=click.Path(exists=True), help="Path to logging.conf")
+@click.option('--log-config', type=click.Path(exists=True, dir_okay=False), help="Path to logging.conf")
 def cli(log_config):
     if log_config:
         # If the user provides a file, use the old fileConfig
@@ -269,3 +309,4 @@ cli.add_command(rename_files_command)
 cli.add_command(prepend_files_command)
 cli.add_command(restore_files_command)
 cli.add_command(organize_folders_command)
+cli.add_command(find_duplicates_command)
