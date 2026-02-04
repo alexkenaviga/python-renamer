@@ -1,33 +1,10 @@
 #!/usr/bin/env python3
 import sys, logging.config, os, re, time, click
 from renamer import functions as func
+from renamer import options as opt
 
 logging.config.fileConfig('logging.conf')
 log = logging.getLogger()
-
-
-def common_options(f):
-    """
-    Decorate the command with common args and options
-    """
-    f = click.option(
-        "-d",
-        "--dryrun",
-        is_flag=True,
-        show_default=True,
-        default=False,
-        help="Execute a Dry Run (doesn't apply any change)",
-    )(f)
-    f = click.option(
-        "-q",
-        "--quiet",
-        is_flag=True,
-        show_default=True,
-        default=False,
-        help="quiet, no logging",
-    )(f)
-
-    return f
 
 
 @click.command(name="rename", help="""Rename files given a matching-pattern and a replace-string\n
@@ -36,23 +13,10 @@ i.e.: python renamer.py rename -d ./test '_[0-9]{8}' 'some_string'
 @click.argument("directory", type=str,)
 @click.argument("matcher", type=str)
 @click.argument("replace", type=str)
-@click.option(
-        "-e",
-        "--regexp",
-        is_flag=True,
-        show_default=True,
-        default=False,
-        help="If set, matcher will be used as a regexp, exact match is used otherwise",
-    )
-@click.option(
-        "-c",
-        "--clean",
-        is_flag=True,
-        show_default=True,
-        default=False,
-        help="no journal (WARN: no rollback available with no journal)",
-    )
-@common_options
+@opt.regexp_option()
+@opt.clean_opt()
+@opt.dryrun_opt()
+@opt.quiet_opt()
 def rename_files_command(
     directory: str, 
     matcher:str,
@@ -112,15 +76,9 @@ i.e.: python renamer.py prepend -d ./test '_[0-9]{8}' 'a_prefix'
 @click.argument("directory", type=str,)
 @click.argument("matcher", type=str)
 @click.argument("prefix", type=str)
-@click.option(
-        "-c",
-        "--clean",
-        is_flag=True,
-        show_default=True,
-        default=False,
-        help="no journal (WARN: no rollback available with no journal)",
-    )
-@common_options
+@opt.clean_opt()
+@opt.dryrun_opt()
+@opt.quiet_opt()
 def prepend_files_command(
     directory: str, 
     matcher:str,
@@ -172,8 +130,9 @@ def prepend_files_command(
 @click.command(name="restore", help="""Restores file renaming based on a journal file (Works only if folder was unmodified)\n
 i.e.: python renamer.py restore -d ./test/journal.yaml'
 """)
-@click.argument("journal", type=str)
-@common_options
+@opt.click.argument("journal", type=str)
+@opt.quiet_opt()
+@opt.dryrun_opt()
 def restore_files_command(
     journal:str,
     dryrun: bool,
