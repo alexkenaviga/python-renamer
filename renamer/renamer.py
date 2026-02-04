@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import sys, logging.config, os, re, time, click
+import sys, logging.config, os, re, time, click, contextlib
 from renamer import functions as func
 from renamer import options as opt
+from pathlib import Path
 
 logging.config.fileConfig('logging.conf')
 log = logging.getLogger()
@@ -64,10 +65,10 @@ def rename_files_command(
 
     if not quiet:
         log.info("STARTING RENAMING:")
-        for f, r in rename_map.items():
-            if not quiet:
-                log.info(f" - renaming {f} -> {os.path.basename(r)}")
-            os.rename(f, r)
+    for f, r in rename_map.items():
+        if not quiet:
+            log.info(f" - renaming {f} -> {os.path.basename(r)}")
+        os.rename(f, r)
 
 
 @click.command(name="prepend", help="""Prepends a string to matching filenames (matcher is threated as regexp)\n
@@ -169,6 +170,86 @@ def restore_files_command(
             file_line = journal_file.readline()
 
 
+@click.command(name="organize", help="""Creates folders based on:\n
+- time (if -t is set)
+- a piece of filename (if -t is set)
+
+Files are moved in created folder. WARN: action is currently unreversable!
+
+i.e.: python renamer.py organize -d ./test -t MONTH
+""")
+@click.argument("directory", type=str)
+@click.option('-o', '--output-folder', type=str, required=False, default=".", help='Output root folder')
+@click.option('-t', '--time-granularity', type=click.Choice(func.folder_time_matchers, 
+    case_sensitive=False), help='MONTH for YYYY/MM folders, YEAR for YYYY folders')
+@click.option('-e', '--expression', help='The piece of file-name to use as folder-name')
+@opt.quiet_opt()
+@opt.dryrun_opt()
+@opt.clean_opt()
+def organize_folders_command(
+    directory: str,
+    output_folder: str,
+    dryrun: bool,
+    quiet: bool,
+    time_granularity: str,
+    expression: str,
+    clean: bool
+):
+    if not time_granularity and not expression:
+        log.error(f"at least one of -t/--time-granularity or -e/--expression options must be set")
+        exit(2)
+    elif time and expression:
+        log.error(f"options -t/--time-granularity and -e/--expression are mutually exclusive")
+        exit(2)
+
+    criteria = "time" if time_granularity else "regex"
+    matcher = time_granularity if time_granularity else expression
+
+    if not quiet:
+        log.info(f"you asked to create folders for  '{directory}' using method [{criteria}: {matcher}'] in target folder '{output_folder}'")
+    elif not os.path.exists(journal) or os.path.isdir(journal):
+        log.error(f"{journal} is not a valid file!")
+        exit(2)
+
+    journal = {}
+    target_path = Path(output_folder)
+    files_index = func.find_files(directory)
+    for file in files_index:
+        folder = func.extract_folder(file, criteria, matcher)
+        file_path = Path(file)
+        target_file = target_path.joinpath(folder).joinpath(file_path.name)
+        journal[file_path] = target_file
+
+    if not quiet:
+        log.info("MATCHED FILES:")
+        for f,r in journal.items():
+            log.info(f" - {f}: {r.parent.absolute()}") 
+    
+    if dryrun:
+        log.warning("DRY_RUN active: only journal created, no rename done.")
+        exit(0)
+
+    dir_path = Path(directory)
+    journal_path = dir_path.joinpath(f"organize-journal_{dir_path.name}_{int(time.time())}.yaml")
+    # No file for 'clean' runs
+    cm = contextlib.nullcontext() if clean else open(journal_path, "w", encoding="utf-8")
+    if clean: log.warning("CLEAN active: no journal created.")
+
+    with cm as out_file:
+        if not quiet: log.info("STARTING ORGANIZATION:")
+        for f, r in journal.items():
+            if not quiet: log.info(f" - moving {f.name} -> {r.parent.absolute()}")
+            
+            if not r.parent.exists():
+                r.parent.mkdir(parents=True, exist_ok=True)
+                if not quiet: log.info(f"CREATED FOLDER: {r.parent.absolute()}")
+            
+            f.rename(r)
+
+            if out_file: out_file.write(f"{f.absolute()}: {r.absolute()}\n")
+        if not quiet: log.info(f"journal path: {journal_path}")
+
+
 # Setup
 
 @click.group()
@@ -179,3 +260,4 @@ def cli():
 cli.add_command(rename_files_command)
 cli.add_command(prepend_files_command)
 cli.add_command(restore_files_command)
+cli.add_command(organize_folders_command)

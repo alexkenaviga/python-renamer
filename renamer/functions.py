@@ -1,7 +1,9 @@
-import os, re
+import os, re, datetime
+from pathlib import Path
 
 
 params_pattern = re.compile("(\\$)([0-9])", re.DOTALL)
+folder_time_matchers = ["MONTH", "YEAR"]
 
 
 def compile_matcher(matcher: str, regexp: bool):
@@ -11,7 +13,7 @@ def compile_matcher(matcher: str, regexp: bool):
         return re.compile(f"(.*)({matcher})(.*)", re.IGNORECASE)
 
 
-def find_files(local_dir: str, pattern: re.Pattern):
+def find_files(local_dir: str, pattern: re.Pattern = re.compile(".*")):
     files_list = []
     for item in os.scandir(local_dir):
         if item.is_dir():
@@ -57,3 +59,39 @@ def extract_params(replace_str):
         params_list.append(int(v))
     params_list.sort()
     return set(params_list)
+
+
+def time_extractor(file:str, matcher:str):
+    file_path = Path(file)
+    date = datetime.datetime.fromtimestamp(file_path.stat().st_birthtime)
+    out = Path(date.strftime("%Y"))
+    if matcher.upper() == "MONTH":
+        out = out.joinpath(date.strftime("%m"))
+    return out
+    
+
+def regex_extractor(file:str, matcher:str):
+    pattern = re.compile(matcher)
+    m = pattern.search(Path(file).name)
+    if m:
+        return Path(m.group())
+    else:
+        return Path("_Unmatched")
+
+    
+
+matchers = {
+    "time": lambda f,m: time_extractor(f,m),
+    "regex": lambda f,m: regex_extractor(f,m),
+}
+
+
+def extract_folder(file: str, type:str, matcher:str):
+    if not file:
+        raise Exception(f"Invalid empty path provided for folder extraction")
+
+    if not type or (type.lower()) not in matchers.keys():
+        raise Exception(f"Invalid type {type} for folder matcher")
+    
+    extractor = matchers[type]
+    return extractor(file, matcher)
