@@ -3,8 +3,23 @@
 .venv
 venv
 env
+
 test
 testing
+
 __pycache__
+
 .vscode
 .DS_Store
+
+# Egg-info directory (created by pip install -e)
+*.egg-info/
+
+# Build artifacts
+build/
+dist/
+
+# Byte-compiled files (Python cache)
+__pycache__/
+*.py[cod]
+*$py.class

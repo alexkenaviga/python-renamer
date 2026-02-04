@@ -2,16 +2,16 @@
 import sys, logging.config, os, re, time, click, contextlib
 from renamer import functions as func
 from renamer import options as opt
+from renamer import defaults
 from pathlib import Path
 
-logging.config.fileConfig('logging.conf')
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 @click.command(name="rename", help="""Rename files given a matching-pattern and a replace-string\n
 i.e.: python renamer.py rename -d ./test '_[0-9]{8}' 'some_string'
 """)
-@click.argument("directory", type=str,)
+@click.argument("directory", type=click.Path(exists=True),)
 @click.argument("matcher", type=str)
 @click.argument("replace", type=str)
 @opt.regexp_option()
@@ -44,9 +44,9 @@ def rename_files_command(
         else:
             rename_map[f] = func.rename_filename(f, matcher_c, replace)
     if not quiet:
-        log.info("MATCHED FILES:")
+        log.debug("MATCHED FILES:")
         for f, r in rename_map.items():
-            log.info(f" - {f} -> {os.path.basename(r)}")
+            log.debug(f" - {f} -> {os.path.basename(r)}")
 
     if not clean:
         journal_path = os.path.join(os.path.abspath(directory),
@@ -74,7 +74,7 @@ def rename_files_command(
 @click.command(name="prepend", help="""Prepends a string to matching filenames (matcher is threated as regexp)\n
 i.e.: python renamer.py prepend -d ./test '_[0-9]{8}' 'a_prefix'
 """)
-@click.argument("directory", type=str,)
+@click.argument("directory", type=click.Path(exists=True),)
 @click.argument("matcher", type=str)
 @click.argument("prefix", type=str)
 @opt.clean_opt()
@@ -101,9 +101,9 @@ def prepend_files_command(
     for f in files:
         rename_map[f] = func.prepend_filename(f, prefix)
     if not quiet:
-        log.info("MATCHED FILES:")
+        log.debug("MATCHED FILES:")
         for f, r in rename_map.items():
-            log.info(f" - {f} -> {os.path.basename(r)}")
+            log.debug(f" - {f} -> {os.path.basename(r)}")
 
     if not clean:
         journal_path = os.path.join(os.path.abspath(directory),
@@ -131,7 +131,7 @@ def prepend_files_command(
 @click.command(name="restore", help="""Restores file renaming based on a journal file (Works only if folder was unmodified)\n
 i.e.: python renamer.py restore -d ./test/journal.yaml'
 """)
-@opt.click.argument("journal", type=str)
+@opt.click.argument("journal", type=click.Path(exists=True))
 @opt.quiet_opt()
 @opt.dryrun_opt()
 def restore_files_command(
@@ -178,7 +178,7 @@ Files are moved in created folder. WARN: action is currently unreversable!
 
 i.e.: python renamer.py organize -d ./test -t MONTH
 """)
-@click.argument("directory", type=str)
+@click.argument("directory", type=click.Path(exists=True))
 @click.option('-o', '--output-folder', type=str, required=False, default=".", help='Output root folder')
 @click.option('-t', '--time-granularity', type=click.Choice(func.folder_time_matchers, 
     case_sensitive=False), help='MONTH for YYYY/MM folders, YEAR for YYYY folders')
@@ -198,7 +198,7 @@ def organize_folders_command(
     if not time_granularity and not expression:
         log.error(f"at least one of -t/--time-granularity or -e/--expression options must be set")
         exit(2)
-    elif time and expression:
+    elif time_granularity and expression:
         log.error(f"options -t/--time-granularity and -e/--expression are mutually exclusive")
         exit(2)
 
@@ -221,9 +221,9 @@ def organize_folders_command(
         journal[file_path] = target_file
 
     if not quiet:
-        log.info("MATCHED FILES:")
+        log.debug("MATCHED FILES:")
         for f,r in journal.items():
-            log.info(f" - {f}: {r.parent.absolute()}") 
+            log.debug(f" - {f}: {r.parent.absolute()}") 
     
     if dryrun:
         log.warning("DRY_RUN active: only journal created, no rename done.")
@@ -253,7 +253,15 @@ def organize_folders_command(
 # Setup
 
 @click.group()
-def cli():
+@click.option('--log-config', type=click.Path(exists=True), help="Path to logging.conf")
+def cli(log_config):
+    if log_config:
+        # If the user provides a file, use the old fileConfig
+        logging.config.fileConfig(log_config, disable_existing_loggers=False)
+    else:
+        # Otherwise, use the programmatic dictionary config
+        logging.config.dictConfig(defaults.DEFAULT_LOGGING_DICT)
+       
     """Main entry point for the CLI."""
 
 
