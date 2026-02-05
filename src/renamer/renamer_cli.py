@@ -27,11 +27,9 @@ def rename_files_command(
     quiet: bool,
     clean: bool,
 ):
+    directory = Path(directory)
     if not quiet:
-        log.info(f"you asked to replace [regexp: {regexp}] '{matcher}' with '{replace}' in '{os.path.abspath(directory)}'")
-    if not (os.path.exists(directory) or os.path.isdir(directory)):
-        log.error(f"{directory} is not a valid directory!")
-        exit(2)
+        log.info(f"you asked to replace [regexp: {regexp}] '{matcher}' with '{replace}' in '{directory.absolute()}'")
 
     matcher_c = func.compile_matcher(matcher, regexp)
     files = func.find_files(directory, matcher_c)
@@ -46,11 +44,10 @@ def rename_files_command(
     if not quiet:
         log.debug("MATCHED FILES:")
         for f, r in rename_map.items():
-            log.debug(f" - {f} -> {os.path.basename(r)}")
+            log.debug(f" - {f} -> {r.name}")
 
     if not clean:
-        journal_path = os.path.join(os.path.abspath(directory),
-                                    f"rename-journal_{os.path.basename(directory)}_{int(time.time())}.yaml")
+        journal_path = directory.joinpath(f"rename-journal_{directory.name}_{int(time.time())}.yaml")
         with open(journal_path, "w", encoding="utf-8") as out_file:
             for f, r in rename_map.items():
                 out_file.write(f"{f}: {r}\n")
@@ -67,8 +64,8 @@ def rename_files_command(
         log.info("STARTING RENAMING:")
     for f, r in rename_map.items():
         if not quiet:
-            log.info(f" - renaming {f} -> {os.path.basename(r)}")
-        os.rename(f, r)
+            log.info(f" - renaming {f} -> {r.name}")
+        f.rename(r)
 
 
 @click.command(name="prepend", help="""Prepends a string to matching filenames (matcher is threated as regexp)\n
@@ -88,26 +85,24 @@ def prepend_files_command(
     quiet: bool,
     clean: bool,
 ):
+    directory = Path(directory)
+
     if not quiet:
-        log.info(f"you asked to prepend '{prefix}' to '{matcher}' in '{os.path.abspath(directory)}'")
-    if not (os.path.exists(directory) or os.path.isdir(directory)):
-        log.error(f"{directory} is not a valid directory!")
-        exit(2)
+        log.info(f"you asked to prepend '{prefix}' to '{matcher}' in '{directory.absolute()}'")
 
     files = func.find_files(directory, func.compile_matcher(matcher, True))
     files.sort()
 
     rename_map = {}
     for f in files:
-        rename_map[f] = func.prepend_filename(f, prefix)
+        rename_map[f] = f.parent.joinpath(f"{prefix}{f.name}")
     if not quiet:
         log.debug("MATCHED FILES:")
         for f, r in rename_map.items():
-            log.debug(f" - {f} -> {os.path.basename(r)}")
+            log.debug(f" - {f} -> {r.name}")
 
     if not clean:
-        journal_path = os.path.join(os.path.abspath(directory),
-                                    f"rename-journal_{os.path.basename(directory)}_{int(time.time())}.yaml")
+        journal_path = directory.joinpath(f"rename-journal_{directory.name}_{int(time.time())}.yaml")
         with open(journal_path, "w", encoding="utf-8") as out_file:
             for f, r in rename_map.items():
                 out_file.write(f"{f}: {r}\n")
@@ -124,8 +119,8 @@ def prepend_files_command(
         log.info("STARTING PREPENDING:")
         for f, r in rename_map.items():
             if not quiet:
-                log.info(f" - renaming {f} -> {os.path.basename(r)}")
-            os.rename(f, r)
+                log.info(f" - renaming {f} -> {r.name}")
+            f.rename(r)
 
 
 @click.command(name="restore", help="""Restores file renaming based on a journal file (Works only if folder was unmodified)\n
@@ -195,6 +190,8 @@ def organize_folders_command(
     expression: str,
     clean: bool
 ):
+    directory = Path(directory)
+    
     if not time_granularity and not expression:
         log.error(f"at least one of -t/--time-granularity or -e/--expression options must be set")
         exit(2)
@@ -228,8 +225,7 @@ def organize_folders_command(
     if dryrun:
         log.warning("DRY_RUN active: only journal will be created")
 
-    dir_path = Path(directory)
-    journal_path = dir_path.joinpath(f"organize-journal_{dir_path.name}_{int(time.time())}.yaml").resolve()
+    journal_path = directory.joinpath(f"organize-journal_{directory.name}_{int(time.time())}.yaml").resolve()
     # No file for 'clean' runs
     cm = contextlib.nullcontext() if clean else open(journal_path, "w", encoding="utf-8")
     if clean: log.warning("CLEAN active: no journal created.")

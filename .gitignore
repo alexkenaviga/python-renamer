@@ -3,9 +3,9 @@
 .venv
 venv
 env
-
-test
 testing
+
+tmp
 
 __pycache__
 

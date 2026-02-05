@@ -3,7 +3,7 @@ from pathlib import Path
 from collections import defaultdict
 
 
-params_pattern = re.compile("(\\$)([0-9])", re.DOTALL)
+params_pattern = re.compile("(\\$)([0-9]+|\\{date\\})", re.DOTALL)
 folder_time_matchers = ["MONTH", "YEAR"]
 
 
@@ -14,56 +14,56 @@ def compile_matcher(matcher: str, regexp: bool):
         return re.compile(f"(.*)({matcher})(.*)", re.IGNORECASE)
 
 
-def find_files(local_dir: str, pattern: re.Pattern = re.compile(".*")):
-    files_list = []
-    for item in os.scandir(local_dir):
-        if item.is_dir():
-            files_list.extend(find_files(f"{os.path.join(local_dir, item.name)}", pattern))
-        elif pattern.match(item.name):
-            files_list.append(os.path.abspath(f"{os.path.join(local_dir, item.name)}"))
-    return files_list
+def find_files(base: Path, pattern: re.Pattern = re.compile(".*")) -> lsit(Path):
+    return [
+        path.resolve()
+        for path in base.rglob("*")
+        if path.is_file() and pattern.match(path.name)
+    ]
 
 
-def rename_filename(filename: str, matcher: re.Pattern, replace_str: str):
-    basename = os.path.basename(filename)
-    m = matcher.match(basename)
+def rename_filename(file: Path, matcher: re.Pattern, replace_str: str) -> Path:
+    m = matcher.match(file.name)
     if m is None:
-        return filename
+        return file
+
     rename = f"{m.group(1)}{replace_str}{m.group(3)}"
-    return f"{os.path.join(os.path.dirname(filename),rename)}"
+    return file.parent.joinpath(rename).resolve()
 
 
-def rename_filename_regex(filename: str, matcher: re.Pattern, replace_str: str):
-    basename = os.path.basename(filename)
-    m = matcher.match(basename)
+def rename_filename_regex(file: Path, matcher: re.Pattern, replace_str: str) -> Path:
+    m = matcher.match(file.name)
     if m is None:
-        return filename
+        return file
 
     params_in_replace_str = extract_params(replace_str)
     rename = replace_str
-    for p in params_in_replace_str:
-        replace_val = m.groups()[p-1] if p > 0 else filename
-        rename = rename.replace(f"${p}", replace_val)
-    return f"{os.path.join(os.path.dirname(filename),rename)}"
 
+    for par in params_in_replace_str:
+        if par == "{date}":
+            date = datetime.datetime.fromtimestamp(file.stat().st_birthtime)
+            rename = rename.replace("${date}", date.strftime("%Y%m%d_%H%M%S"))
+        else:
+            pos = int(par)
+            replace_val = m.groups()[pos-1] if pos > 0 else file.name
+            rename = rename.replace(f"${pos}", replace_val)
 
-def prepend_filename(filename: str, prepend: str):
-    basename = os.path.basename(filename)
-    rename = f"{prepend}{basename}"
-    return f"{os.path.join(os.path.dirname(filename),rename)}"
+    return file.parent.joinpath(rename).resolve()
 
 
 def extract_params(replace_str):
-    param_matchers = params_pattern.findall(replace_str)
     params_list = []
+    if not replace_str: 
+        return params_list
+    
+    param_matchers = params_pattern.findall(replace_str)
     for p, v in param_matchers:
-        params_list.append(int(v))
+        params_list.append(v)
     params_list.sort()
     return set(params_list)
 
 
-def time_extractor(file:str, matcher:str):
-    file_path = Path(file)
+def time_extractor(file_path:Path, matcher:str) -> Path:
     date = datetime.datetime.fromtimestamp(file_path.stat().st_birthtime)
     out = Path(date.strftime("%Y"))
     if matcher.upper() == "MONTH":
@@ -71,11 +71,14 @@ def time_extractor(file:str, matcher:str):
     return out
     
 
-def regex_extractor(file:str, matcher:str):
+def regex_extractor(file:Path, matcher:str):
     pattern = re.compile(matcher)
-    m = pattern.search(Path(file).name)
+    m = pattern.search(file.name)
     if m:
-        return Path(m.group())
+        if len(m.groups()) > 0:
+            return Path(m.group(1))
+        else: 
+            return Path(m.group())
     else:
         return Path("_Unmatched")
 
@@ -87,7 +90,7 @@ matchers = {
 }
 
 
-def extract_folder(file: str, type:str, matcher:str):
+def extract_folder(file: Path, type:str, matcher:str):
     if not file:
         raise Exception(f"Invalid empty path provided for folder extraction")
 
