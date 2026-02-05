@@ -35,12 +35,11 @@ def rename_files_command(
     files = func.find_files(directory, matcher_c)
     files.sort()
 
-    rename_map = {}
-    for f in files:
-        if regexp:
-            rename_map[f] = func.rename_filename_regex(f, matcher_c, replace)
-        else:
-            rename_map[f] = func.rename_filename(f, matcher_c, replace)
+    if regexp:
+        rename_map = {f: func.rename_filename_regex(f, matcher_c, replace) for f in files}
+    else:
+        rename_map = {f: func.rename_filename(f, matcher_c, replace) for f in files}
+
     if not quiet:
         log.debug("MATCHED FILES:")
         for f, r in rename_map.items():
