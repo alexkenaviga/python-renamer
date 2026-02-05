@@ -98,3 +98,55 @@ def test_regex_extractor_success(monkeypatch) -> Path:
     assert func.regex_extractor(input, ".*_(.+)\\..*").name == "something"
     assert func.regex_extractor(input, "^.{4}").name == "some"
  
+
+def test_manage_name_conflicts_empty_map():
+    assert func.manage_name_conflicts({}) == {}
+
+def test_manage_name_conflicts_no_duplicates():
+    rename_map = {
+        Path("a.txt"): Path("x.txt"),
+        Path("b.txt"): Path("y.txt"),
+    }
+    assert func.manage_name_conflicts(rename_map) == rename_map
+
+def test_manage_name_conflicts_with_duplicates():
+    rename_map = {
+        Path("a.txt"): Path("file.txt"),
+        Path("b.txt"): Path("file.txt"),
+        Path("c.txt"): Path("file.txt"),
+    }
+    result = func.manage_name_conflicts(rename_map)
+    expected = {
+        Path("a.txt"): Path("file.txt"),
+        Path("b.txt"): Path("file_001.txt"),
+        Path("c.txt"): Path("file_002.txt"),
+    }
+    assert result == expected
+
+def test_manage_name_conflicts_mixed_duplicates():
+    rename_map = {
+        Path("a.txt"): Path("file.txt"),
+        Path("b.txt"): Path("file.txt"),
+        Path("c.txt"): Path("unique.txt"),
+    }
+    result = func.manage_name_conflicts(rename_map)
+    expected = {
+        Path("a.txt"): Path("file.txt"),
+        Path("b.txt"): Path("file_001.txt"),
+        Path("c.txt"): Path("unique.txt"),
+    }
+    assert result == expected
+
+def test_manage_name_conflicts_nested_paths():
+    rename_map = {
+        Path("folder/a.txt"): Path("folder/file.txt"),
+        Path("folder/b.txt"): Path("folder/file.txt"),
+        Path("folder/c.txt"): Path("folder/file.txt"),
+    }
+    result = func.manage_name_conflicts(rename_map)
+    expected = {
+        Path("folder/a.txt"): Path("folder/file.txt"),
+        Path("folder/b.txt"): Path("folder/file_001.txt"),
+        Path("folder/c.txt"): Path("folder/file_002.txt"),
+    }
+    assert result == expected

@@ -40,6 +40,8 @@ def rename_files_command(
     else:
         rename_map = {f: func.rename_filename(f, matcher_c, replace) for f in files}
 
+    rename_map = func.manage_name_conflicts(rename_map)
+
     if not quiet:
         log.debug("MATCHED FILES:")
         for f, r in rename_map.items():
@@ -64,7 +66,10 @@ def rename_files_command(
     for f, r in rename_map.items():
         if not quiet:
             log.info(f" - renaming {f} -> {r.name}")
-        f.rename(r)
+        if r.exists():
+            log.warn(f"can't rename '{f.resolve()}' to '{r.resolve()}': destination already exists!")
+        else:
+            f.rename(r)
 
 
 @click.command(name="prepend", help="""Prepends a string to matching filenames (matcher is threated as regexp)\n

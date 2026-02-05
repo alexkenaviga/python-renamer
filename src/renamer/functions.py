@@ -134,3 +134,22 @@ def is_excluded(file: Path, exclude: list):
         if e in f"{file.absolute()}".lower(): 
             return True
     return False
+
+
+def manage_name_conflicts(rename_map: dict[Path, Path]) -> dict[Path, Path]:
+    if not rename_map:
+        return {}
+
+    # Group sources by target
+    index = defaultdict(list)
+    for src, ren in rename_map.items():
+        index[ren].append(src)
+
+    out = dict(rename_map)
+
+    # Handle duplicates
+    for rename, items in index.items():
+        for i, item in enumerate(items[1:], start=1):  # skip the first
+            out[item] = rename.parent / f"{rename.stem}_{i:03d}{rename.suffix}"
+
+    return out
