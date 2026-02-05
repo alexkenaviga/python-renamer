@@ -120,7 +120,8 @@ def find_duplicates(folder_a, folder_b, exclude:tuple):
                 size = file_path.stat().st_size
                 
                 # Use metadata as the unique key
-                key = (name, size, creation_date)
+                # key = (name, size, creation_date)
+                key = (size, creation_date)
                 file_map[key].append(file_path.resolve())
 
     # Filter out entries that only appeared once

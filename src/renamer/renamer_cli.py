@@ -28,8 +28,9 @@ def rename_files_command(
     clean: bool,
 ):
     directory = Path(directory)
-    if not quiet:
-        log.info(f"you asked to replace [regexp: {regexp}] '{matcher}' with '{replace}' in '{directory.absolute()}'")
+    log.info(f"you asked to replace [regexp: {regexp}] '{matcher}' with '{replace}' in '{directory.absolute()}'")
+
+    if dryrun: log.warning("DRY_RUN active: only journal created, no rename done.")
 
     matcher_c = func.compile_matcher(matcher, regexp)
     files = func.find_files(directory, matcher_c)
@@ -52,24 +53,22 @@ def rename_files_command(
         with open(journal_path, "w", encoding="utf-8") as out_file:
             for f, r in rename_map.items():
                 out_file.write(f"{f}: {r}\n")
-        if not quiet:
-            log.info(f"journal path: {journal_path}")
+        log.info(f"journal path: {journal_path}")
     else:
         log.warning("CLEAN active: no journal created, no rollback available.")
 
-    if dryrun:
-        log.warning("DRY_RUN active: only journal created, no rename done.")
-        exit(0)
-
-    if not quiet:
-        log.info("STARTING RENAMING:")
-    for f, r in rename_map.items():
+    if not dryrun:
+        
         if not quiet:
-            log.info(f" - renaming {f} -> {r.name}")
-        if r.exists():
-            log.warn(f"can't rename '{f.resolve()}' to '{r.resolve()}': destination already exists!")
-        else:
-            f.rename(r)
+            log.info("STARTING RENAMING:")
+        
+        for f, r in rename_map.items():
+            if not quiet:
+                log.info(f" - renaming {f} -> {r.name}")
+            if r.exists():
+                log.warn(f"can't rename '{f.resolve()}' to '{r.resolve()}': destination already exists!")
+            else:
+                f.rename(r)
 
 
 @click.command(name="prepend", help="""Prepends a string to matching filenames (matcher is threated as regexp)\n
