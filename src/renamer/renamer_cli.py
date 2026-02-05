@@ -177,7 +177,7 @@ Files are moved in created folder. WARN: action is currently unreversable!
 i.e.: python renamer.py organize -d ./test -t MONTH
 """)
 @click.argument("directory", type=click.Path(exists=True, file_okay=False))
-@click.option('-o', '--output-folder', type=str, required=False, default=".", help='Output root folder')
+@click.option('-o', '--output-folder', type=str, required=False, help='Output root folder (default is DIRECTORY value for in-place organization)')
 @click.option('-t', '--time-granularity', type=click.Choice(func.folder_time_matchers, 
     case_sensitive=False), help='MONTH for YYYY/MM folders, YEAR for YYYY folders')
 @click.option('-e', '--expression', help='The piece of file-name to use as folder-name')
@@ -194,6 +194,7 @@ def organize_folders_command(
     clean: bool
 ):
     directory = Path(directory)
+    output_folder = directory if not output_folder else Path(output_folder)
     
     if not time_granularity and not expression:
         log.error(f"at least one of -t/--time-granularity or -e/--expression options must be set")
@@ -212,12 +213,11 @@ def organize_folders_command(
         exit(2)
 
     journal = {}
-    target_path = Path(output_folder)
     files_index = func.find_files(directory)
     for file in files_index:
         folder = func.extract_folder(file, criteria, matcher)
         file_path = Path(file)
-        target_file = target_path.joinpath(folder).joinpath(file_path.name).resolve()
+        target_file = output_folder.joinpath(folder).joinpath(file_path.name).resolve()
         journal[file_path] = target_file
 
     if not quiet:
