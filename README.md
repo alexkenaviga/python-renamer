@@ -9,6 +9,11 @@ make setup
 ```shell
 source .env/vin/activate
 ```
+# !!!OUTDATED!!!
+
+> **TRY THIS INSTEAD:**  
+> `renamer rename tmp '\.txt' '.md' -d`
+
 
 ## RUN RENAMER:
 ```shell
