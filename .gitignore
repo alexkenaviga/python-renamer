@@ -7,8 +7,6 @@ testing
 
 tmp
 
-__pycache__
-
 .vscode
 .DS_Store
 
@@ -21,5 +19,6 @@ dist/
 
 # Byte-compiled files (Python cache)
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *$py.class
