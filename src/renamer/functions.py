@@ -14,7 +14,7 @@ def compile_matcher(matcher: str, regexp: bool):
         return re.compile(f"(.*)({matcher})(.*)", re.IGNORECASE)
 
 
-def find_files(base: Path, pattern: re.Pattern = re.compile(".*")) -> lsit(Path):
+def find_files(base: Path, pattern: re.Pattern = re.compile(".*")) -> list[Path]:
     return [
         path.resolve()
         for path in base.rglob("*")
@@ -82,7 +82,6 @@ def regex_extractor(file:Path, matcher:str):
     else:
         return Path("_Unmatched")
 
-    
 
 matchers = {
     "time": lambda f,m: time_extractor(f,m),
@@ -91,8 +90,8 @@ matchers = {
 
 
 def extract_folder(file: Path, type:str, matcher:str):
-    if not file:
-        raise Exception(f"Invalid empty path provided for folder extraction")
+    if file is None or not file.exists():
+        raise Exception(f"Invalid or missing path provided for folder extraction")
 
     if not type or (type.lower()) not in matchers.keys():
         raise Exception(f"Invalid type {type} for folder matcher")

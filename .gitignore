@@ -7,7 +7,6 @@ testing
 
 tmp
 
-.vscode
 .DS_Store
 
 # Egg-info directory (created by pip install -e)

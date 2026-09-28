@@ -1,0 +1,93 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        // Run all tests
+        {
+            "name": "Run all tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-s"
+            ],
+            "justMyCode": false,
+            "console": "integratedTerminal"
+        },
+        // Run Dry-Run Renamer/Prepend
+        {
+            "name": "Run Dry-Run Renamer/Prepend",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "renamer",
+            "args": [
+                "prepend",
+                "-d",
+                "tmp",
+                "([A|G]{3})_([D|G]{3})(.*)",
+                "PREFIX_"
+            ]
+        },
+        // Run Dry-Run Renamer/Rename
+        {
+            "name": "Run Dry-Run Renamer/Rename",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "renamer",
+            "args": [
+                "rename",
+                "-d",
+                "tmp/",
+                "^.+(\\.[a-zA-Z1-9]+)$",
+                "${date}$1",
+                "-e"
+            ]
+        },
+        // Run Dry-Run Renamer/Restore
+        {
+            "name": "Run Dry-Run Renamer/Restore",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "renamer",
+            "args": [
+                "restore",
+                "-d",
+                "tmp/rename-journal_tmp_1770292113.yaml"
+            ]
+        },
+        // Run Dry-Run Renamer/Organize
+        {
+            "name": "Run Dry-Run Renamer/Organize",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "renamer",
+            "args": [
+                "organize",
+                "tmp",
+                "-o",
+                "tmp/out",
+                "-t",
+                "month",
+                "-d"
+            ]
+        },
+        // Run Renamer/Find-duplicates
+        {
+            "name": "Run Renamer/Find-duplicates",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "renamer",
+            "args": [
+                "find-duplicates",
+                "~/Desktop/Foto/Tutto-By-Date",
+                "~/Desktop/Foto/Both",
+                "-e",
+                "DS_Store",
+                "-e",
+                "testcheproprioproprio"
+            ]
+        }
+    ]
+}
