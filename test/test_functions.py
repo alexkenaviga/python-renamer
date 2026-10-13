@@ -19,8 +19,10 @@ def test_extract_params_success():
 
 def test_rename_filename_regex_success(monkeypatch):
     dt_utc = datetime.datetime(2026, 2, 5, 8, 30, 0, tzinfo=datetime.timezone.utc)
-    fixed_timestamp = int(dt_utc.timestamp())
-    fake_stat = SimpleNamespace(st_birthtime=fixed_timestamp)
+    dt_utc_modified = datetime.datetime(2025, 2, 5, 8, 30, 0, tzinfo=datetime.timezone.utc)
+    fixed_creation_timestamp = int(dt_utc.timestamp())
+    fixed_modified_timestamp = int(dt_utc_modified.timestamp())
+    fake_stat = SimpleNamespace(st_birthtime=fixed_creation_timestamp, st_mtime=fixed_modified_timestamp)
 
     def fake_stat_method(self):
         return fake_stat
@@ -31,7 +33,7 @@ def test_rename_filename_regex_success(monkeypatch):
     input = Path("some_filename_about_something.png")
     out = func.rename_filename_regex(input, matcher, "$2_${date}$3")
 
-    assert out.name == "something_20260205_093000.png"
+    assert out.name == "something_20250205_093000.png"
     assert out.parent.resolve() == input.parent.resolve(),\
         f"Expected input parent '{input.parent}' to be equal to output parent '{out.parent}'"
 
@@ -77,9 +79,11 @@ def test_find_files_mocked(monkeypatch):
 
 
 def test_time_extractor_success(monkeypatch) -> Path:
-    dt_utc = datetime.datetime(2026, 2, 5, 8, 30, 0, tzinfo=datetime.timezone.utc)
-    fixed_timestamp = int(dt_utc.timestamp())
-    fake_stat = SimpleNamespace(st_birthtime=fixed_timestamp)
+    creation_date = datetime.datetime(2026, 2, 5, 8, 30, 0, tzinfo=datetime.timezone.utc)
+    modified_date = datetime.datetime(2025, 2, 5, 8, 30, 0, tzinfo=datetime.timezone.utc)
+    creation_timestamp = int(creation_date.timestamp())
+    modified_timestamp = int(modified_date.timestamp())
+    fake_stat = SimpleNamespace(st_birthtime=creation_timestamp, st_mtime=modified_timestamp)
 
     def fake_stat_method(self):
         return fake_stat
@@ -90,7 +94,7 @@ def test_time_extractor_success(monkeypatch) -> Path:
     out = func.time_extractor(input, "MonTH")
 
     assert out.name == "02"
-    assert out.parent.name == "2026"
+    assert out.parent.name == "2025"
 
 
 def test_regex_extractor_success(monkeypatch) -> Path:

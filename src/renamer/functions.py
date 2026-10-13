@@ -41,7 +41,9 @@ def rename_filename_regex(file: Path, matcher: re.Pattern, replace_str: str) -> 
 
     for par in params_in_replace_str:
         if par == "{date}":
-            date = datetime.datetime.fromtimestamp(file.stat().st_birthtime)
+            creation_date = file.stat().st_birthtime
+            modified_date = file.stat().st_mtime
+            date = datetime.datetime.fromtimestamp(min(creation_date, modified_date))
             rename = rename.replace("${date}", date.strftime("%Y%m%d_%H%M%S"))
         else:
             pos = int(par)
@@ -64,7 +66,9 @@ def extract_params(replace_str):
 
 
 def time_extractor(file_path:Path, matcher:str) -> Path:
-    date = datetime.datetime.fromtimestamp(file_path.stat().st_birthtime)
+    creation_date = file_path.stat().st_birthtime
+    modified_date = file_path.stat().st_mtime
+    date = datetime.datetime.fromtimestamp(min(creation_date, modified_date))
     out = Path(date.strftime("%Y"))
     if matcher.upper() == "MONTH":
         out = out.joinpath(date.strftime("%m"))
@@ -115,7 +119,6 @@ def find_duplicates(folder_a, folder_b, exclude:tuple):
         
                 # Extract metadata
                 creation_date = file_path.stat().st_birthtime
-                name = file_path.name
                 size = file_path.stat().st_size
                 
                 # Use metadata as the unique key

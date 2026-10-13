@@ -66,7 +66,7 @@ def rename_files_command(
             if not quiet:
                 log.info(f" - renaming {f} -> {r.name}")
             if r.exists():
-                log.warn(f"can't rename '{f.resolve()}' to '{r.resolve()}': destination already exists!")
+                log.warning(f"can't rename '{f.resolve()}' to '{r.resolve()}': destination already exists!")
             else:
                 f.rename(r)
 
